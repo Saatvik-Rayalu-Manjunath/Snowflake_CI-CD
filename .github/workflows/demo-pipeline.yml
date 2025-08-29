@@ -1,0 +1,74 @@
+name: 🚀 Snowflake Demo Pipeline
+
+on:
+  push:
+    branches: [ main, demo ]
+  pull_request:
+    branches: [ main ]
+  workflow_dispatch:  # Manual trigger for demo
+
+jobs:
+  deploy:
+    name: 🎯 Deploy to Production
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: 📥 Checkout Code
+      uses: actions/checkout@v3
+      
+    - name: 🐍 Setup Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.9'
+        
+    - name: 📦 Install Dependencies
+      run: |
+        pip install snowflake-connector-python
+        
+    - name: 🧪 Test Connection
+      env:
+        SNOWFLAKE_USER: ${{ secrets.SNOWFLAKE_USER }}
+        SNOWFLAKE_PASSWORD: ${{ secrets.SNOWFLAKE_PASSWORD }}
+        SNOWFLAKE_ACCOUNT: ${{ secrets.SNOWFLAKE_ACCOUNT }}
+      run: |
+        python -c "
+        import snowflake.connector, os
+        conn = snowflake.connector.connect(
+            user=os.getenv('SNOWFLAKE_USER'),
+            password=os.getenv('SNOWFLAKE_PASSWORD'), 
+            account=os.getenv('SNOWFLAKE_ACCOUNT')
+        )
+        print('✅ Snowflake connection successful!')
+        conn.close()
+        "
+        
+    - name: 🚀 Deploy to Production
+      env:
+        SNOWFLAKE_USER: ${{ secrets.SNOWFLAKE_USER }}
+        SNOWFLAKE_PASSWORD: ${{ secrets.SNOWFLAKE_PASSWORD }}
+        SNOWFLAKE_ACCOUNT: ${{ secrets.SNOWFLAKE_ACCOUNT }}
+      run: |
+        echo "🎬 Starting automated deployment..."
+        python migrate.py
+        echo "🎉 Deployment completed!"
+        
+    - name: 📊 Post-Deployment Report
+      if: always()
+      env:
+        SNOWFLAKE_USER: ${{ secrets.SNOWFLAKE_USER }}
+        SNOWFLAKE_PASSWORD: ${{ secrets.SNOWFLAKE_PASSWORD }}
+        SNOWFLAKE_ACCOUNT: ${{ secrets.SNOWFLAKE_ACCOUNT }}
+      run: |
+        python -c "
+        import snowflake.connector, os
+        conn = snowflake.connector.connect(
+            user='saatvikrayalu',
+            password='w_vrX7.CVfFNh.8', 
+            account='JFUVMRO-FB11082.snowflakecomputing.com'
+        )
+        cursor = conn.cursor()
+        cursor.execute('SELECT COUNT(*) FROM PROD_DEMO.PUBLIC.products')
+        count = cursor.fetchone()[0]
+        print(f'📈 FINAL STATUS: {count} products now live in PRODUCTION')
+        conn.close()
+        "
