@@ -1,41 +1,42 @@
-name: "🚨 TEMP Snowflake Demo (HARD-CODED CREDS — REMOVE AFTER TEST)"
+name: "TEMP Snowflake Demo (hardcoded creds)"
 
 on:
   workflow_dispatch: {}
   push:
     branches: [ "main", "demo" ]
+  pull_request:
+    branches: [ "main" ]
 
 jobs:
   deploy:
-    name: "🎯 Deploy to Production"
+    name: "Deploy to Production"
     runs-on: ubuntu-latest
-
     steps:
-      - name: 📥 Checkout Code
+      - name: Checkout
         uses: actions/checkout@v4
 
-      - name: 🐍 Setup Python
+      - name: Setup Python
         uses: actions/setup-python@v5
         with:
           python-version: "3.11"
 
-      - name: 📦 Install Dependencies
+      - name: Install Snowflake connector
         run: |
           python -m pip install --upgrade pip
           pip install --quiet snowflake-connector-python
 
-      - name: 🧪 Test Connection (HARD-CODED)
+      - name: Test connection (hardcoded)
+        shell: bash
         run: |
           python - <<'PY'
           import snowflake.connector
-          # ---------- HARD-CODED (TEMP) ----------
-          USER      = "saatvikrayalu"                 # <--- REPLACE IF NEEDED
-          PASSWORD  = "REPLACE_ME_PASSWORD"           # <--- REPLACE
-          ACCOUNT   = "jfuvmro-fb11082.us-west-2"     # <--- REPLACE (no .snowflakecomputing.com)
-          WAREHOUSE = "COMPUTE_WH"                    # <--- REPLACE IF NEEDED
-          # Mask the password in logs (best-effort)
+          # ---- TEMP HARDCODED ----
+          USER="saatvikrayalu"
+          PASSWORD="w_vrX7.CVfFNh.8"     # <-- put your temp password here
+          ACCOUNT="jfuvmro-fb11082"  # <-- no '.snowflakecomputing.com'
+          WAREHOUSE="COMPUTE_WH"
+          # ------------------------
           print("::add-mask::" + PASSWORD)
-          # ---------------------------------------
           conn = snowflake.connector.connect(
               user=USER, password=PASSWORD, account=ACCOUNT, warehouse=WAREHOUSE
           )
@@ -45,40 +46,38 @@ jobs:
           cur.close(); conn.close()
           PY
 
-      - name: 🚀 Deploy to Production (HARD-CODED)
+      - name: Deploy (optional migrate.py)
+        if: ${{ hashFiles('migrate.py') != '' }}
         run: |
-          echo "🎬 Starting automated deployment..."
-          if [ -f migrate.py ]; then
-            python migrate.py
-          else
-            echo "ℹ️ No migrate.py found. Skipping deploy step."
-          fi
-          echo "🎉 Deployment completed!"
+          echo "Starting deployment..."
+          python migrate.py
+          echo "Deployment complete."
 
-      - name: 📊 Post-Deployment Report (HARD-CODED)
+      - name: Post-deploy report (hardcoded)
         if: always()
+        shell: bash
         run: |
           python - <<'PY'
           import snowflake.connector
-        USER      = "saatvikrayalu"           
-          PASSWORD  = "w_vrX7.CVfFNh.8"           
-          ACCOUNT   = "JFUVMRO-FB11082"     
-          WAREHOUSE = "COMPUTE_WH"
+          USER="saatvikrayalu"
+          PASSWORD="w_vrX7.CVfFNh.8"         # <-- same temp password
+          ACCOUNT="jfuvmro-fb11082"
+          WAREHOUSE="COMPUTE_WH"
           print("::add-mask::" + PASSWORD)
           try:
-            conn = snowflake.connector.connect(
-              user=USER, password=PASSWORD, account=ACCOUNT, warehouse=WAREHOUSE
-            )
-            cur = conn.cursor()
-            try:
-              cur.execute("select count(*) from PROD_DB.PUBLIC.products")
-              count = cur.fetchone()[0]
-              print(f"📈 FINAL STATUS: {count} products now live in PRODUCTION")
-            except Exception as e:
-              print(f"ℹ️ Report skipped (table missing or privilege issue): {e}")
-            finally:
-              cur.close(); conn.close()
+              conn = snowflake.connector.connect(
+                  user=USER, password=PASSWORD, account=ACCOUNT, warehouse=WAREHOUSE
+              )
+              cur = conn.cursor()
+              try:
+                  cur.execute("select count(*) from PROD_DB.PUBLIC.products")
+                  count = cur.fetchone()[0]
+                  print(f"📈 FINAL STATUS: {count} products now live in PRODUCTION")
+              except Exception as e:
+                  print(f"ℹ️ Report skipped (table missing or privilege issue): {e}")
+              finally:
+                  cur.close(); conn.close()
           except Exception as e:
-            print(f"ℹ️ Could not connect for report: {e}")
+              print(f"ℹ️ Could not connect for report: {e}")
           PY
 
