@@ -67,7 +67,7 @@ jobs:
             account='JFUVMRO-FB11082'
         )
         cursor = conn.cursor()
-        cursor.execute('SELECT COUNT(*) FROM PROD_DEMO.PUBLIC.products')
+        cursor.execute('SELECT COUNT(*) FROM PROD_DB.PUBLIC.products')
         count = cursor.fetchone()[0]
         print(f'📈 FINAL STATUS: {count} products now live in PRODUCTION')
         conn.close()
