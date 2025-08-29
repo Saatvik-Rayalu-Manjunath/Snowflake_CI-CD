@@ -64,7 +64,7 @@ jobs:
         conn = snowflake.connector.connect(
             user='saatvikrayalu',
             password='w_vrX7.CVfFNh.8', 
-            account='JFUVMRO-FB11082.snowflakecomputing.com'
+            account='JFUVMRO-FB11082'
         )
         cursor = conn.cursor()
         cursor.execute('SELECT COUNT(*) FROM PROD_DEMO.PUBLIC.products')
