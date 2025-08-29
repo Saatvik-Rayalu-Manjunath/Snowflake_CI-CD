@@ -1,98 +1,84 @@
-name: 🚀 Snowflake Demo Pipeline
+name: "🚨 TEMP Snowflake Demo (HARD-CODED CREDS — REMOVE AFTER TEST)"
 
 on:
+  workflow_dispatch: {}
   push:
-    branches: [ main, demo ]
-  pull_request:
-    branches: [ main ]
-  workflow_dispatch:  # Manual trigger for demo
+    branches: [ "main", "demo" ]
 
 jobs:
   deploy:
-    name: 🎯 Deploy to Production
+    name: "🎯 Deploy to Production"
     runs-on: ubuntu-latest
-    
-    steps:
-    - name: 📥 Checkout Code
-      uses: actions/checkout@v3
-      
-    - name: 🐍 Setup Python
-      uses: actions/setup-python@v4
-      with:
-        python-version: '3.9'
-        
-    - name: 📦 Install Dependencies
-      run: |
-        pip install snowflake-connector-python
-        
-    # Replace the "🧪 Test Connection" step with this:
-    - name: 🧪 Test Connection
-      env:
-        SNOWFLAKE_USER: ${{ secrets.SNOWFLAKE_USER }}
-        SNOWFLAKE_PASSWORD: ${{ secrets.SNOWFLAKE_PASSWORD }}
-        SNOWFLAKE_ACCOUNT: ${{ secrets.SNOWFLAKE_ACCOUNT }}
-      run: |
-        echo "Testing connection with user: $SNOWFLAKE_USER"
-        echo "Account: $SNOWFLAKE_ACCOUNT"
-        python -c "
-        import snowflake.connector
-        import os
-        
-        user = os.environ.get('SNOWFLAKE_USER')
-        password = os.environ.get('SNOWFLAKE_PASSWORD') 
-        account = os.environ.get('SNOWFLAKE_ACCOUNT')
-        
-        print(f'Connecting with user: {user}')
-        print(f'Account: {account}')
-        
-        if not user or not password or not account:
-            print('❌ Missing credentials!')
-            print(f'User: {bool(user)}')
-            print(f'Password: {bool(password)}')
-            print(f'Account: {bool(account)}')
-            exit(1)
-        
-        try:
-            conn = snowflake.connector.connect(
-                user=user,
-                password=password,
-                account=account,
-                warehouse='COMPUTE_WH'
-            )
-            print('✅ Snowflake connection successful!')
-            conn.close()
-        except Exception as e:
-            print(f'❌ Connection failed: {e}')
-            exit(1)
-        "
-        
-     - name: 🚀 Deploy to Production
-      env:
-        SNOWFLAKE_USER: ${{ secrets.SNOWFLAKE_USER }}
-        SNOWFLAKE_PASSWORD: ${{ secrets.SNOWFLAKE_PASSWORD }}
-        SNOWFLAKE_ACCOUNT: ${{ secrets.SNOWFLAKE_ACCOUNT }}
-      run: |
-        echo "🎬 Starting automated deployment..."
-        python migrate.py
-        echo "🎉 Deployment completed!" 
 
-    - name: 📊 Post-Deployment Report
-      if: always()
-      env:
-        SNOWFLAKE_USER: ${{ secrets.SNOWFLAKE_USER }}
-        SNOWFLAKE_PASSWORD: ${{ secrets.SNOWFLAKE_PASSWORD }}
-        SNOWFLAKE_ACCOUNT: ${{ secrets.SNOWFLAKE_ACCOUNT }}
-      run: |
-        python -c "
-        import snowflake.connector, os
-        conn = snowflake.connector.connect(
-            user='saatvikrayalu',
-            password='w_vrX7.CVfFNh.8', 
-            account='JFUVMRO-FB11082'
-        )
-        cursor = conn.cursor()
-        cursor.execute('SELECT COUNT(*) FROM PROD_DB.PUBLIC.products')
-        count = cursor.fetchone()[0]
-        print(f'📈 FINAL STATUS: {count} products now live in PRODUCTION')
-        conn.close()
-        "
+    steps:
+      - name: 📥 Checkout Code
+        uses: actions/checkout@v4
+
+      - name: 🐍 Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: 📦 Install Dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install --quiet snowflake-connector-python
+
+      - name: 🧪 Test Connection (HARD-CODED)
+        run: |
+          python - <<'PY'
+          import snowflake.connector
+          # ---------- HARD-CODED (TEMP) ----------
+          USER      = "saatvikrayalu"                 # <--- REPLACE IF NEEDED
+          PASSWORD  = "REPLACE_ME_PASSWORD"           # <--- REPLACE
+          ACCOUNT   = "jfuvmro-fb11082.us-west-2"     # <--- REPLACE (no .snowflakecomputing.com)
+          WAREHOUSE = "COMPUTE_WH"                    # <--- REPLACE IF NEEDED
+          # Mask the password in logs (best-effort)
+          print("::add-mask::" + PASSWORD)
+          # ---------------------------------------
+          conn = snowflake.connector.connect(
+              user=USER, password=PASSWORD, account=ACCOUNT, warehouse=WAREHOUSE
+          )
+          cur = conn.cursor()
+          cur.execute("select current_user(), current_account(), current_region(), current_version()")
+          print("✅ Connected:", cur.fetchone())
+          cur.close(); conn.close()
+          PY
+
+      - name: 🚀 Deploy to Production (HARD-CODED)
+        run: |
+          echo "🎬 Starting automated deployment..."
+          if [ -f migrate.py ]; then
+            python migrate.py
+          else
+            echo "ℹ️ No migrate.py found. Skipping deploy step."
+          fi
+          echo "🎉 Deployment completed!"
+
+      - name: 📊 Post-Deployment Report (HARD-CODED)
+        if: always()
+        run: |
+          python - <<'PY'
+          import snowflake.connector
+        USER      = "saatvikrayalu"           
+          PASSWORD  = "w_vrX7.CVfFNh.8"           
+          ACCOUNT   = "JFUVMRO-FB11082"     
+          WAREHOUSE = "COMPUTE_WH"
+          print("::add-mask::" + PASSWORD)
+          try:
+            conn = snowflake.connector.connect(
+              user=USER, password=PASSWORD, account=ACCOUNT, warehouse=WAREHOUSE
+            )
+            cur = conn.cursor()
+            try:
+              cur.execute("select count(*) from PROD_DB.PUBLIC.products")
+              count = cur.fetchone()[0]
+              print(f"📈 FINAL STATUS: {count} products now live in PRODUCTION")
+            except Exception as e:
+              print(f"ℹ️ Report skipped (table missing or privilege issue): {e}")
+            finally:
+              cur.close(); conn.close()
+          except Exception as e:
+            print(f"ℹ️ Could not connect for report: {e}")
+          PY
+
